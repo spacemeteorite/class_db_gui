@@ -7,6 +7,6 @@ author: hayek wang
 This project used tkinter and sqlite to create a app for student to choose classes.
 
 # Features
-- sign up account
+- sign up account (usrname: r"^[a-zA-Z0-9]+{5,10}$", pwd: r"^[a-zA-Z0-9]+{10,30}$")
 - log in account
 - choose class and drop class
