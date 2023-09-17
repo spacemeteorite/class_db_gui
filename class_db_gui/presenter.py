@@ -4,9 +4,9 @@ import re
 # modules from third party
 
 # modules wrote by self
-from views import WindowLogin, WindowMain, WindowSignup
-from models import Auth, SchoolClass
-from encryption import EncryptMethods
+from .views import WindowLogin, WindowMain, WindowSignup
+from .models import Auth, SchoolClass, StudentClass
+from .encryption import EncryptMethods
 
 
 
@@ -19,9 +19,15 @@ class Presenter:
         # initiate database
         self.db_auth = Auth()
         self.db_school_class = SchoolClass()
+        self.db_student_class = StudentClass()
 
         # run app
         self.run()
+
+        # metadata
+        self.current_user_id = None # auto assign after logged in
+        self.current_waiting_to_add_class_id = None # auto assign after class selected
+        self.current_waiting_to_drop_class_id = None # auto assign
 
 
     def handle_login(self, event=None) -> None:
@@ -43,18 +49,49 @@ class Presenter:
         self.validation_create_user(username_entry, password_entry)
 
 
-    def handle_listbox_select(self, event=None) -> None:
-        print(event.widget.curselection())
+    def handle_listbox_available_class_select(self, event=None) -> None:
+        current_selected_class_listbox_index = event.widget.curselection()[0]
+        self.current_waiting_to_add_class_id = self.window_main.mapping_available_class_to_classid[current_selected_class_listbox_index]
+
+
+    def handle_listbox_selected_class_select(self, event=None) -> None:
+        current_selected_class_listbox_index = event.widget.curselection()[0]
+        self.current_waiting_to_drop_class_id = self.window_main.mapping_selected_class_to_classid[current_selected_class_listbox_index]
 
 
     def handle_add_class(self, event=None) -> None:
-        print('handle add class')
-        pass
+        print(f'try add class {self.current_waiting_to_add_class_id}')
+
+        # check if student has selected this class already
+        student_id = self.current_user_id
+        class_id = self.current_waiting_to_add_class_id
+        sql_query = f'''
+                    SELECT * 
+                    FROM student_class
+                    WHERE student_id = {student_id} AND class_id = {class_id}
+                    '''
+        result = self.db_student_class.cursor.execute(sql_query).fetchall()
+        print('result:', result)
+        if result == []:
+            self.db_student_class.create_row(student_id, class_id)
+            self.window_main.msgbox_info('success', f'add class{class_id} successfully!')
+        else:
+            self.window_main.msgbox_warning('duplicated record', 'you already selected this class, try another one')
+
+        selected_class_list = self.db_student_class.get_by_student_id(self.current_user_id)
+        self.window_main.update_listbox_selected_classes(selected_class_list)
 
 
     def handle_drop_class(self, event=None) -> None:
         print('handle drop class')
-        pass
+        student_id = self.current_user_id
+        class_id = self.current_waiting_to_drop_class_id
+        self.db_student_class.delete_row(student_id, class_id)
+
+        selected_class_list = self.db_student_class.get_by_student_id(self.current_user_id)
+        self.window_main.update_listbox_selected_classes(selected_class_list)
+
+        self.window_main.msgbox_info('success', f'successfully dropped class{class_id}')
 
 
     def validation_login(self, username, password):
@@ -101,15 +138,16 @@ class Presenter:
         self.window_login.msgbox_success(f'Successfully Logged In', f'Welcome {username}!')
         self.window_login.destroy()
 
-        user_id = self.db_auth.get_id(username)
+        self.current_user_id = self.db_auth.get_id(username)
         self.window_main = WindowMain(self)
         self.window_main.variables['username'].set(username)
-        self.window_main.variables['user_id'].set(user_id)
+        self.window_main.variables['user_id'].set(self.current_user_id)
 
-        school_class_list = self.db_school_class.get_classes()
-        for c in school_class_list:
-            self.window_main.listbox_classes.insert(0, str(c))
 
+        class_list = self.db_school_class.get_classes()
+        self.window_main.update_listbox_available_classes(class_list)
+        selected_class_list = self.db_student_class.get_by_student_id(self.current_user_id)
+        self.window_main.update_listbox_selected_classes(selected_class_list)
         self.window_main.run()
 
 

@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 
 
 # modules wrote by self
-import widgets
+from . import widgets
 
 
 
@@ -134,17 +134,17 @@ class WindowMain(tk.Tk):
         self.presenter = presenter
     
         self.title('Home')
-        self.geometry('500x500')
         self.eval('tk::PlaceWindow . center') # use tcl to center window
     
         self.variables = {
             'user_id': tk.StringVar(),
             'username': tk.StringVar(),
             'date': tk.StringVar(),
-            'available_classes': None,
-            'selected_classes': None,
         }
-        self.mapping_listbox_to_classid = []
+        self.mapping_available_class_to_classid = {}
+
+        self.mapping_selected_class_to_classid = {}
+
 
         self.init_widget()
 
@@ -181,15 +181,38 @@ class WindowMain(tk.Tk):
         self.listbox_classes_selected.grid()
 
         # event handler
-        self.listbox_classes.bind('<<ListboxSelect>>', self.presenter.handle_listbox_select)
+        self.listbox_classes.bind('<<ListboxSelect>>', self.presenter.handle_listbox_available_class_select)
+        self.listbox_classes_selected.bind('<<ListboxSelect>>', self.presenter.handle_listbox_selected_class_select)
         self.btn_add_class.bind('<ButtonRelease-1>', self.presenter.handle_add_class)
         self.btn_drop_class.bind('<ButtonRelease-1>', self.presenter.handle_drop_class)
 
 
-    def update_listbox_available_classes(self) -> None:
+    def update_listbox_available_classes(self, class_list: list[tuple]) -> None:
         self.listbox_classes.delete(0, tk.END)
-        for c in self.variables['available_classes']:
-            self.listbox_classes.insert(0, c)
+        listbox_index = 0
+        for c in class_list:
+            self.listbox_classes.insert(tk.END, f'{c[0], c[1]}')
+            self.mapping_available_class_to_classid[listbox_index] = c[0]
+            listbox_index += 1
+        self.update()
+
+
+    def update_listbox_selected_classes(self, class_list: list[tuple]) -> None:
+        self.listbox_classes_selected.delete(0, tk.END)
+        listbox_index = 0
+        for c in class_list:
+            self.listbox_classes_selected.insert(tk.END, f'{c[1]}')
+            self.mapping_selected_class_to_classid[listbox_index] = c[1]
+            listbox_index += 1
+        self.update()
+
+
+    def msgbox_warning(self, title: str, content: str) -> None:
+        messagebox.showwarning(title, content)
+
+
+    def msgbox_info(self, title: str, content: str) -> None:
+        messagebox.showinfo(title, content)
 
 
     def run(self):

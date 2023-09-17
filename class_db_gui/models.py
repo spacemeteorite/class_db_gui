@@ -111,7 +111,8 @@ class StudentClass:
                         student_id INTEGER NOT NULL,
                         class_id INTEGER NOT NULL,
                         FOREIGN KEY(student_id) REFERENCES student_auth(student_id),
-                        FOREIGN KEY(class_id) REFERENCES school_class(class_id)
+                        FOREIGN KEY(class_id) REFERENCES school_class(class_id),
+                        PRIMARY KEY(student_id, class_id)
                     )
                     '''
         self.cursor.execute(sql_query)
@@ -124,6 +125,17 @@ class StudentClass:
                     '''
         self.cursor.execute(sql_query)
         self.connection.commit()
+        print('class added successfully!')
+
+
+    def delete_row(self, student_id: int, class_id: int) -> None:
+        sql_query = f'''
+                    DELETE FROM student_class
+                    WHERE student_id = {student_id} AND class_id = {class_id}
+                    '''
+        self.cursor.execute(sql_query)
+        self.connection.commit()
+        print('class dropped successfully')
 
 
     def clear(self) -> None:
